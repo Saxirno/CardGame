@@ -1,0 +1,18 @@
+
+.card{
+    /*-fx-background-image: url('img.png');*/
+}
+
+.card:hover {
+    -fx-pref-width: 300px;
+}
+
+.next{
+    -fx-border-width: 0px;
+}
+.next:hover{
+    -fx-effect: dropshadow(GAUSSIAN,BLUE,1,1,0,0);
+}
+.next:pressed{
+    -fx-opacity: 0.3;
+}
