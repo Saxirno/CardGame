@@ -44,6 +44,7 @@ public class UiController  {
     @FXML
     void Next(ActionEvent event) {
         CardBox.getChildren().clear();
+        end();
     }
 
     @FXML
@@ -51,23 +52,17 @@ public class UiController  {
     }
 
     public void initialize() {
-//        Button bb1 = new Button("1");
-//        Button bb2 = new Button("2");
-//        Button bb3 = new Button("3");
-//        CardBox.getChildren().addAll(bb1, bb2, bb3);
-
-
         game.init();
+        start();
+
+    }
+
+    public void start(){
         game.makeCard();
         game.player1.energy = game.rand.nextInt(3)+2;
         updatePlayer();
         RoundCard();
         RoundEnergy(game.player1.energy);
-
-    }
-
-    public void start(){
-
     }
 
     public void update(){
@@ -75,7 +70,15 @@ public class UiController  {
     }
 
     public  void end(){
+        /*
 
+        电脑操作和逻辑
+
+         */
+
+
+        game.checkCard();
+        start();
     }
 
     public void RoundCard(){
@@ -141,6 +144,12 @@ public class UiController  {
             transition.setOnFinished(e2->{//动画完成后放入弃牌堆
                 discard.setImage(card.getImage());
             });
+            if(card2.attribute.equalsIgnoreCase("s"))
+            {
+                game.player1.energy-=card2.cost;
+                game.player1.health-=card2.value;
+                game.computer.health-=card2.value;
+            }
             game.player1.effect(card2);//卡牌对palyer1生效
             System.out.println(game.player1.energy);
             //刷新属性
