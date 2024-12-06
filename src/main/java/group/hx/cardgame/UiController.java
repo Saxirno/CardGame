@@ -20,14 +20,19 @@ import javafx.util.Duration;
 public class UiController  {
     Game game = new Game();//game逻辑类
 
-    @FXML
-    private Button next;
+
     @FXML
     private Text health;
     @FXML
+    private Text comhealth;
+    @FXML
     private Text attack;
     @FXML
+    private Text comattack;
+    @FXML
     private Text defense;
+    @FXML
+    private Text comdefense;
 
     @FXML
     private ImageView discard;
@@ -60,25 +65,48 @@ public class UiController  {
     public void start(){
         game.makeCard();
         game.player1.energy = game.rand.nextInt(3)+2;
-        updatePlayer();
+        update();
         RoundCard();
         RoundEnergy(game.player1.energy);
     }
 
-    public void update(){
-
-    }
-
     public  void end(){
-        /*
-
-        电脑操作和逻辑
-
-         */
+        //电脑操作
+        playCom();
 
 
+        //回合结算
+        /*考虑添加动画*/
         game.checkCard();
         start();
+    }
+
+    private void playCom() {
+        //电脑随机出一张牌
+        Card skillCom = game.CLibrary.get(game.rand.nextInt(4));
+        ImageView comCard = CreateCard(skillCom);
+        comCard.setOnMouseClicked(null);
+        comCard.setOpacity(0.0);
+        FadeTransition ft = new FadeTransition(Duration.millis(500), comCard);
+        ft.setFromValue(0.0);
+        ft.setToValue(1.0);
+        ft.play();
+        ft.setOnFinished(e->{
+           FadeTransition ft2 = new FadeTransition(Duration.millis(500), comCard);
+           ft2.setFromValue(1.0);
+           ft2.setToValue(0.0);
+           ft2.setDelay(Duration.millis(1000));
+           ft2.play();
+
+        });
+
+        center.setCenter(comCard);
+
+        if (skillCom.attribute.equals("s")) {
+            game.player1.health -= skillCom.value;
+            game.computer.health -= skillCom.value;
+        } else
+            game.computer.effect(skillCom);
     }
 
     public void RoundCard(){
@@ -138,7 +166,7 @@ public class UiController  {
             }
             center.setCenter(card);
             //设置淡出动画
-            FadeTransition transition = new FadeTransition(Duration.seconds(1),card);
+            FadeTransition transition = new FadeTransition(Duration.seconds(2),card);
             transition.setToValue(0);
             transition.play();
             transition.setOnFinished(e2->{//动画完成后放入弃牌堆
@@ -153,7 +181,7 @@ public class UiController  {
             game.player1.effect(card2);//卡牌对palyer1生效
             System.out.println(game.player1.energy);
             //刷新属性
-            updatePlayer();
+            update();
             RoundEnergy(game.player1.energy);
         });
         return card;
@@ -175,10 +203,13 @@ public class UiController  {
         return new ParallelTransition(fade, st);
     }
 
-    private void updatePlayer() {//刷新属性
+    private void update() {//刷新属性
         attack.setText(Integer.toString(game.player1.attack));
         defense.setText(Integer.toString(game.player1.defense));
         health.setText(Integer.toString(game.player1.health));
+        comhealth.setText(Integer.toString(game.computer.health));
+        comattack.setText(Integer.toString(game.computer.attack));
+        comdefense.setText(Integer.toString(game.computer.defense));
     }
 
 
