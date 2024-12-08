@@ -3,88 +3,162 @@ package group.hx.cardgame;
 import javafx.animation.*;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
+import java.io.File;
+
+
 public class UiController  {
-    Game game = new Game();//game逻辑类
-
-
-    @FXML
-    private Text health;
-    @FXML
-    private Text comhealth;
-    @FXML
-    private Text attack;
-    @FXML
-    private Text comattack;
-    @FXML
-    private Text defense;
-    @FXML
-    private Text comdefense;
+    Game game;//game逻辑类
+    int Energy=2;//用于随着难度提升增加玩家能量下限和上限
+    int comHp=10;//电脑生命值
+    Image result;//对局结果图
+    MediaPlayer click = new MediaPlayer(new Media(getClass().getResource("click.mp3").toExternalForm()));
+    MediaPlayer pass = new MediaPlayer(new Media(getClass().getResource("pass.mp3").toExternalForm()));
+    MediaPlayer cardClick = new MediaPlayer(new Media(getClass().getResource("card.mp3").toExternalForm()));
 
     @FXML
-    private ImageView discard;
+    private Text health;//玩家hp
+    @FXML
+    private Text comhealth;//电脑hp
+    @FXML
+    private Text attack;//玩家攻击力
+    @FXML
+    private Text comattack;//电脑攻击力
+    @FXML
+    private Text defense;//玩家防御力
+    @FXML
+    private Text comdefense;//电脑防御力
+    @FXML
+    private ImageView discard;//弃牌堆顶
+    @FXML
+    private ImageView comdiscard;//电脑弃牌堆
+    @FXML
+    private VBox left;//用于装能量球
+    @FXML
+    private BorderPane center;//中心出牌区
+    @FXML
+    private HBox CardBox;//玩家手牌区
+    @FXML
+    private ImageView comCard;//电脑打出的牌
 
     @FXML
-    private VBox left;
-
-    @FXML
-    private BorderPane center;
-
-    @FXML
-    private HBox CardBox;
-
-    @FXML
-    void Next(ActionEvent event) {
-        CardBox.getChildren().clear();
+    void Next(ActionEvent event) {//回合结束点击事件
+        CardBox.getChildren().clear();//清除手牌
+        click.play();
         end();
     }
 
-    @FXML
-    void testClicked(MouseEvent event) {
-    }
+    public void initialize() {//控制器初始化
+        game = new Game();
+        game.init(comHp);
+        click.setOnEndOfMedia(()->{
+            click.seek(click.getStartTime());
+            click.stop();
+        });
+        cardClick.setOnEndOfMedia(()->{
+            cardClick.seek(cardClick.getStartTime());
+            cardClick.stop();
+        });
+        pass.setOnEndOfMedia(()->{
+            pass.seek(pass.getStartTime());
+            pass.stop();
+        });
 
-    public void initialize() {
-        game.init();
         start();
-
     }
 
-    public void start(){
+    public void start(){//回合开始
         game.makeCard();
-        game.player1.energy = game.rand.nextInt(3)+2;
-        update();
+        game.player1.energy = game.rand.nextInt(3)+Energy;//玩家随机能量
+        //电脑操作
+        playCom();//电脑先出牌
+        update();//刷新属性
         RoundCard();
         RoundEnergy(game.player1.energy);
     }
 
-    public  void end(){
-        //电脑操作
-        playCom();
-
-
+    public  void end(){//回合结束
         //回合结算
         /*考虑添加动画*/
         game.checkCard();
-        start();
+        result=isWin();
+        if(result!=null){
+            Stage stage = new Stage();
+            stage.initStyle(StageStyle.UNDECORATED);
+            Button again = new Button("下一难度");
+            Button still = new Button("当前难度");
+            Button exit = new Button("退出游戏");
+            again.setOnAction(e->{
+                comHp+=10;
+                Energy= Energy>=4?Energy:Energy+1;//上限最多2+4格能量
+                initialize();
+                stage.close();
+            });
+            still.setOnAction(e->{
+                initialize();
+                stage.close();
+            });
+            exit.setOnAction(e->{
+                System.exit(0);
+            });
+
+
+            ImageView last = new ImageView(result);//图片
+            last.setFitWidth(250);
+            last.setFitHeight(150);
+
+            HBox hbox = new HBox();//按钮水平排列
+            hbox.getChildren().addAll(again,still,exit);
+            hbox.setSpacing(10);
+            FlowPane flowpane = new FlowPane();//行布局
+            flowpane.getChildren().addAll(last,hbox);
+            Scene scene = new Scene(flowpane,275,180);
+            flowpane.setAlignment(Pos.CENTER);
+            flowpane.setPadding(new Insets(0));
+            flowpane.setHgap(0);
+
+            stage.setScene(scene);
+            stage.showAndWait();//弹出窗口
+        }
+        else start();
+
+    }
+
+    private Image isWin() {
+        if(game.player1.health>0&&game.computer.health<=0)
+            return new Image("win.png");//win
+        else if(game.player1.health<=0&&game.computer.health>0)
+            return new Image("lose.png");//lose
+        else if(game.player1.health<=0)
+            return new Image("draw.png");//平局
+        return null;
     }
 
     private void playCom() {
         //电脑随机出一张牌
         Card skillCom = game.CLibrary.get(game.rand.nextInt(4));
-        ImageView comCard = CreateCard(skillCom);
+        skillCom.mediaPlayer.play();
+        comCard = CreateCard(skillCom);
         comCard.setOnMouseClicked(null);
         comCard.setOpacity(0.0);
         FadeTransition ft = new FadeTransition(Duration.millis(500), comCard);
@@ -97,7 +171,9 @@ public class UiController  {
            ft2.setToValue(0.0);
            ft2.setDelay(Duration.millis(1000));
            ft2.play();
-
+           ft2.setOnFinished(e2->{
+               comdiscard.setImage(comCard.getImage());//动画完成后放入电脑弃牌堆
+           });
         });
 
         center.setCenter(comCard);
@@ -119,6 +195,7 @@ public class UiController  {
     }
 
     public ImageView CreateCard(Card card){
+        //依据属性选择卡牌图片
         Image image = switch (card.attribute) {
             case "a" -> new Image("attack.png");
             case "d" -> new Image("defense.png");
@@ -129,7 +206,8 @@ public class UiController  {
         return getImageView(image,card);
     }
 
-    private ImageView getImageView(Image image,Card card2) {//设置卡牌图片属性
+    //设置卡牌图片属性
+    private ImageView getImageView(Image image,Card card2) {
         ImageView card = new ImageView(image);
         card.setFitHeight(100);
         card.setFitWidth(100);
@@ -138,6 +216,7 @@ public class UiController  {
         card.setOnMouseEntered(e->{
             card.setFitHeight(120);
             card.setFitWidth(120);
+            pass.play();
         });
         card.setOnMouseExited(e->{
             card.setFitWidth(100);
@@ -146,9 +225,9 @@ public class UiController  {
 
         card.setOnMouseClicked(e->{//点击卡牌即打出
             //打入中央
+            cardClick.play();
             if (game.player1.energy<card2.cost)
             {
-                System.out.println("not enough energy");
                 //设置能量不足点击时的动画
                 //能量动画
                 left.getChildren().forEach(e5->{
@@ -164,8 +243,9 @@ public class UiController  {
                 pt.play();
                 return;
             }
+            card2.mediaPlayer.play();
             center.setCenter(card);
-            //设置淡出动画
+            //设置打入中央后的淡出动画
             FadeTransition transition = new FadeTransition(Duration.seconds(2),card);
             transition.setToValue(0);
             transition.play();
@@ -179,8 +259,7 @@ public class UiController  {
                 game.computer.health-=card2.value;
             }
             game.player1.effect(card2);//卡牌对palyer1生效
-            System.out.println(game.player1.energy);
-            //刷新属性
+            //刷新属性和能量
             update();
             RoundEnergy(game.player1.energy);
         });
